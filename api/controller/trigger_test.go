@@ -63,9 +63,13 @@ func TestSaveTrigger(t *testing.T) {
 			"super.metric1": {},
 			"super.metric2": {},
 		},
+		MetricsToTargetRelation: map[string]string{
+			"t2": "super.metric3",
+		},
 	}
 	emptyLastCheck := moira.CheckData{
-		Metrics: make(map[string]moira.MetricState),
+		Metrics:                 make(map[string]moira.MetricState),
+		MetricsToTargetRelation: map[string]string{},
 	}
 
 	Convey("No timeSeries", t, func() {
@@ -80,13 +84,13 @@ func TestSaveTrigger(t *testing.T) {
 			So(resp, ShouldResemble, &dto.SaveTriggerResponse{ID: triggerID, Message: "trigger updated"})
 		})
 		Convey("Has last check", func() {
-			actualLastCheck := lastCheck
+			actualLastCheck := emptyLastCheck
 			dataBase.EXPECT().AcquireTriggerCheckLock(triggerID, 10)
 			dataBase.EXPECT().DeleteTriggerCheckLock(triggerID)
 			dataBase.EXPECT().GetTriggerLastCheck(triggerID).Return(actualLastCheck, nil)
 			dataBase.EXPECT().SetTriggerLastCheck(triggerID, &actualLastCheck, trigger.IsRemote).Return(nil)
 			dataBase.EXPECT().SaveTrigger(triggerID, &trigger).Return(nil)
-			resp, err := saveTrigger(dataBase, &trigger, triggerID, make(map[string]bool))
+			resp, err := saveTrigger(dataBase, &trigger, triggerID, map[string]bool{"super.metric1": true, "super.metric2": true})
 			So(err, ShouldBeNil)
 			So(resp, ShouldResemble, &dto.SaveTriggerResponse{ID: triggerID, Message: "trigger updated"})
 			So(actualLastCheck, ShouldResemble, emptyLastCheck)
